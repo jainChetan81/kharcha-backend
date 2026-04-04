@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["sh", "-c", "bunx drizzle-kit push && bun run src/index.ts"]
