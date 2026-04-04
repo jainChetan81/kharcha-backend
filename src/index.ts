@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { env } from "./lib/env";
+import featureFlags from "./routes/feature-flags";
 import register from "./routes/register";
 import sync from "./routes/sync";
 import webhook from "./routes/webhook";
@@ -12,6 +13,7 @@ app.use("*", logger());
 
 app.get("/", (c) => c.json({ status: "ok", app: "kharcha-backend" }));
 
+app.route("/feature-flags", featureFlags);
 app.route("/register", register);
 app.route("/sync", sync);
 app.route("/webhook", webhook);

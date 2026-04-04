@@ -24,8 +24,17 @@ jobs:
       - name: typecheck
         run: bun run typecheck
 
+      - name: verify secrets
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then echo "❌ RAILWAY_TOKEN not set"; exit 1; fi
+          if [ -z "$RAILWAY_PROJECT_ID" ]; then echo "❌ RAILWAY_PROJECT_ID not set"; exit 1; fi
+          echo "✅ All secrets loaded"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
       - name: deploy to railway
         run: bunx @railway/cli up --service kharcha-backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: 53496959-e4a6-4856-aa6c-ddbd31cc0968
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}

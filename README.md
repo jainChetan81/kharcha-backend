@@ -152,6 +152,20 @@ x-device-id: kharcha-d2a2cd0d-2832-4238-aa1d-9b923f0e5fc6
 }
 ```
 
+### `GET /feature-flags`
+
+Returns feature flags for the mobile app. Used to control which features are visible per user.
+
+**Response:**
+
+```json
+{
+  "gmail_sync_enabled_for": ["Chetan", "User"]
+}
+```
+
+The mobile app checks if the current user's name is in `gmail_sync_enabled_for` — if yes, the Gmail Sync row appears in the profile screen. Controlled via `GMAIL_SYNC_ENABLED_FOR` env var (comma-separated list of usernames).
+
 ### `POST /webhook/email`
 
 Postmark inbound email webhook. Validates token, resolves device from `To` address, parses bank email, stores transaction.
@@ -205,6 +219,7 @@ Returns `{ "ok": true, "parsed": false }` if the email format is not recognized.
 | `PORT` | `3000` | No | HTTP server port |
 | `POSTMARK_WEBHOOK_TOKEN` | — | Yes | Secret for validating Postmark webhooks |
 | `EMAIL_DOMAIN` | `kharcha.app` | No | Domain for forwarding emails |
+| `GMAIL_SYNC_ENABLED_FOR` | `""` | No | Comma-separated usernames with Gmail Sync access |
 
 ## Scripts
 
@@ -224,8 +239,36 @@ docker compose logs -f api          # tail API logs
 
 ```bash
 bun run db:push                     # push schema to Postgres
-bun run db:seed                     # seed test device + 12 transactions
+bun run db:seed                     # seed default test device + 12 transactions
 bun run db:seed <device_id>         # seed transactions for a specific device
+```
+
+#### Seeding for your device
+
+1. Open the Device Sync screen in the app
+2. Tap the User ID to copy it
+3. Run:
+
+```bash
+docker compose exec api bun run db:seed <paste-your-user-id>
+```
+
+If the device is already registered, transactions are added to it. If not, a new test device is created. Then hit "Sync Now" in the app to pull them in.
+
+#### Debugging
+
+```bash
+# List all registered devices
+docker compose exec postgres psql -U postgres -d kharcha -c "SELECT device_id, forwarding_email FROM devices;"
+
+# List device IDs that have transactions
+docker compose exec postgres psql -U postgres -d kharcha -c "SELECT DISTINCT device_id FROM transactions;"
+
+# Count transactions per device
+docker compose exec postgres psql -U postgres -d kharcha -c "SELECT device_id, COUNT(*) FROM transactions GROUP BY device_id;"
+
+# View all transactions for a specific device
+docker compose exec postgres psql -U postgres -d kharcha -c "SELECT id, amount, merchant, date, type FROM transactions WHERE device_id = '<device_id>';"
 ```
 
 ### On host machine
