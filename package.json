@@ -1,0 +1,28 @@
+{
+	"name": "kharcha-backend",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "bun run --hot src/index.ts",
+		"build": "bun build src/index.ts --outdir dist",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"typecheck": "tsc --noEmit",
+		"quality": "bun run lint && bun run typecheck",
+		"db:migrate": "bun run src/db/migrate.ts",
+		"db:push": "drizzle-kit push",
+		"db:seed": "bun run src/db/seed.ts",
+		"db:studio": "DATABASE_URL=postgres://postgres:postgres@localhost:5432/kharcha drizzle-kit studio"
+	},
+	"dependencies": {
+		"hono": "latest",
+		"drizzle-orm": "latest",
+		"postgres": "latest"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.10",
+		"bun-types": "latest",
+		"drizzle-kit": "latest",
+		"lefthook": "^2.1.4",
+		"typescript": "latest"
+	}
+}

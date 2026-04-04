@@ -1,0 +1,30 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: install dependencies
+        run: bun install
+
+      - name: lint
+        run: bun run lint
+
+      - name: typecheck
+        run: bun run typecheck
+
+      - name: deploy to railway
+        run: bunx @railway/cli up --service kharcha-backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
