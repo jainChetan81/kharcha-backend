@@ -28,4 +28,4 @@ jobs:
         run: bunx @railway/cli up --service kharcha-backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_PROJECT_ID: 53496959-e4a6-4856-aa6c-ddbd31cc0968
