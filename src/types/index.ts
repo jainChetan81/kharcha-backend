@@ -26,7 +26,7 @@ export type ParsedTransaction = {
 
 export type PostmarkInboundEmail = {
 	From: string;
-	To: string;
+	ToFull: { Email: string; Name: string }[];
 	Subject: string;
 	TextBody: string;
 	HtmlBody: string;

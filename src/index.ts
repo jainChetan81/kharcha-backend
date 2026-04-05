@@ -22,9 +22,18 @@ app.route("/webhook", webhook);
 
 app.onError((err, c) => {
 	if (err instanceof HTTPException) {
+		if (err.status >= 500) {
+			console.error(
+				`[${err.status}] ${c.req.method} ${c.req.path} — ${err.message}`,
+			);
+		} else {
+			console.warn(
+				`[${err.status}] ${c.req.method} ${c.req.path} — ${err.message}`,
+			);
+		}
 		return c.json({ error: err.message }, err.status);
 	}
-	console.error(err);
+	console.error(`[500] ${c.req.method} ${c.req.path}`, err);
 	return c.json({ error: "Internal server error" }, 500);
 });
 

@@ -15,26 +15,36 @@ const webhook = new Hono();
 // We validate the webhook token, find the device by forwarding email,
 // parse the bank transaction from the email body, and store it
 webhook.post("/email", async (c) => {
-	// Validate Postmark webhook token
 	const token = c.req.header(HEADERS.POSTMARK_TOKEN);
 
 	if (token !== env.POSTMARK_WEBHOOK_TOKEN) {
+		console.warn("[webhook] rejected — invalid token");
 		throw new HTTPException(401, { message: "Invalid webhook token" });
 	}
 
 	const body = await c.req.json<PostmarkInboundEmail>();
-	const { From, To, TextBody } = body;
+	const { From, ToFull, TextBody } = body;
 
-	// Extract forwarding token from To address (e.g. sync+abc123@kharcha.app)
-	const toMatch = To.match(/sync\+([^@]+)@/);
+	if (!From || !ToFull?.length || !TextBody) {
+		console.warn(
+			`[webhook] rejected — missing fields: From=${!!From} ToFull=${!!ToFull?.length} TextBody=${!!TextBody}`,
+		);
+		throw new HTTPException(400, {
+			message: "Missing required fields: From, ToFull, TextBody",
+		});
+	}
+
+	const toEmail = ToFull[0].Email;
+	console.log(`[webhook] received email from=${From} to=${toEmail}`);
+
+	const toMatch = toEmail.match(/sync\+([^@]+)@/);
 	if (!toMatch) {
+		console.warn(`[webhook] rejected — invalid To address: ${toEmail}`);
 		throw new HTTPException(400, { message: "Invalid forwarding address" });
 	}
 
-	// Handle comma-separated To addresses — take the first one
-	const forwardingEmail = To.split(",")[0].trim();
+	const forwardingEmail = toEmail;
 
-	// Find which device this forwarding email belongs to
 	const [device] = await db
 		.select()
 		.from(devices)
@@ -42,15 +52,18 @@ webhook.post("/email", async (c) => {
 		.limit(1);
 
 	if (!device) {
+		console.warn(
+			`[webhook] rejected — no device for email: ${forwardingEmail}`,
+		);
 		throw new HTTPException(404, {
 			message: "Device not found for this forwarding address",
 		});
 	}
 
-	// Parse the bank email body (Axis Bank UPI / HDFC credit card)
 	const parsed = parseEmail(From, TextBody);
 
 	if (!parsed) {
+		console.log(`[webhook] could not parse email from ${From}`);
 		return c.json({
 			ok: true,
 			parsed: false,
@@ -58,7 +71,6 @@ webhook.post("/email", async (c) => {
 		});
 	}
 
-	// Store the parsed transaction
 	await db.insert(transactions).values({
 		device_id: device.device_id,
 		amount: parsed.amount,
@@ -69,6 +81,9 @@ webhook.post("/email", async (c) => {
 		source_type: SOURCE_TYPE.SYNCED,
 	});
 
+	console.log(
+		`[webhook] saved transaction: ${parsed.amount} at ${parsed.merchant} for device ${device.device_id}`,
+	);
 	return c.json({ ok: true, parsed: true });
 });
 
