@@ -5,7 +5,7 @@ import { db } from "../db";
 import { devices, transactions } from "../db/schema";
 import { SOURCE_TYPE } from "../lib/constants";
 import { env } from "../lib/env";
-import { parseEmail } from "../lib/parser";
+import { parseEmail } from "../lib/parsers";
 import type { PostmarkInboundEmail } from "../types";
 
 const webhook = new Hono();
@@ -64,8 +64,13 @@ webhook.post("/email/:token", async (c) => {
 		return c.json({ ok: true, parsed: false, message: "Device not found" });
 	}
 
-	console.log(`[webhook] device found: ${device.device_id}`);
+	console.log(
+		`[webhook] device found: ${device.device_id}, parsing email from=${From}`,
+	);
 	const parsed = parseEmail(From, TextBody);
+	console.log(
+		`[webhook] parse result: ${parsed ? `${parsed.amount} at ${parsed.merchant}` : "null"}`,
+	);
 
 	if (!parsed) {
 		console.log(`[webhook] could not parse email from ${From}`);
