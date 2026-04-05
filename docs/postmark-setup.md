@@ -7,7 +7,7 @@ End-to-end guide for setting up the email-to-transaction pipeline: Gmail → Pos
 ```text
 Gmail (bank alerts)
   │
-  │ auto-forwards to sync+token@mail.yourdomain.com
+  │ auto-forwards to sync+token@mail.thechetanjain.com
   ▼
 Postmark (inbound email service)
   │
@@ -43,14 +43,14 @@ Done — transaction appears in Kharcha
 
 You need an MX record so emails sent to your domain get routed to Postmark's servers.
 
-**Use a subdomain** (e.g. `mail.yourdomain.com`) to avoid breaking existing email on your root domain.
+**Use a subdomain** (e.g. `mail.thechetanjain.com`) to avoid breaking existing email on your root domain.
 
 ### Find Your DNS Provider
 
 Your DNS is managed wherever your **nameservers** point to. Check with:
 
 ```bash
-dig NS yourdomain.com
+dig NS thechetanjain.com
 ```
 
 Common setups:
@@ -71,12 +71,12 @@ Common setups:
 ### Verify DNS Propagation
 
 ```bash
-dig MX mail.yourdomain.com
+dig MX mail.thechetanjain.com
 ```
 
 Expected output:
 ```
-mail.yourdomain.com.  60  IN  MX  10  inbound.postmarkapp.com.
+mail.thechetanjain.com.  60  IN  MX  10  inbound.postmarkapp.com.
 ```
 
 If it doesn't show up, wait a few minutes and try again. DNS propagation is usually instant but can take up to 30 minutes.
@@ -85,7 +85,7 @@ If it doesn't show up, wait a few minutes and try again. DNS propagation is usua
 
 1. Go to Postmark → your Server → **Message Streams** → **Default Inbound Stream**
 2. Click **Settings**
-3. Set **Inbound domain**: `mail.yourdomain.com`
+3. Set **Inbound domain**: `mail.thechetanjain.com`
 4. Set **Inbound webhook URL**: `https://your-railway-url.railway.app/webhook/email/<POSTMARK_WEBHOOK_TOKEN>`
    - Replace `<POSTMARK_WEBHOOK_TOKEN>` with the value from your Railway env vars
    - This secret path segment authenticates the webhook — Postmark doesn't send auth headers
@@ -96,18 +96,18 @@ If it doesn't show up, wait a few minutes and try again. DNS propagation is usua
 
 On your kharcha-backend Railway service, set:
 
-| Variable                 | Value                        |
-|--------------------------|------------------------------|
-| `EMAIL_DOMAIN`           | `mail.yourdomain.com`        |
-| `POSTMARK_WEBHOOK_TOKEN` | Your chosen secret token     |
+| Variable                 | Value                            |
+|--------------------------|----------------------------------|
+| `EMAIL_DOMAIN`           | `mail.thechetanjain.com`         |
+| `POSTMARK_WEBHOOK_TOKEN` | Your chosen secret token         |
 
-The `EMAIL_DOMAIN` controls what forwarding emails look like when devices register (e.g. `sync+abc123@mail.yourdomain.com`).
+The `EMAIL_DOMAIN` controls what forwarding emails look like when devices register (e.g. `sync+ad84c56da3fa44c0@mail.thechetanjain.com`).
 
 ## Step 5: Register Device in the App
 
 1. Open Kharcha → Profile → Device Sync
 2. Tap **Register Device**
-3. You'll get a forwarding email like `sync+abc123@mail.yourdomain.com`
+3. You'll get a forwarding email like `sync+ad84c56da3fa44c0@mail.thechetanjain.com`
 4. Tap to copy it
 
 ## Step 6: Set Up Gmail Forwarding
@@ -139,7 +139,7 @@ curl -X POST https://your-railway-url.railway.app/webhook/email/<POSTMARK_WEBHOO
   -H "Content-Type: application/json" \
   -d '{
     "From": "alerts@axisbank.com",
-    "ToFull": [{"Email": "sync+abc123@mail.yourdomain.com", "Name": ""}],
+    "ToFull": [{"Email": "sync+ad84c56da3fa44c0@mail.thechetanjain.com", "Name": ""}],
     "Subject": "Transaction Alert",
     "TextBody": "Rs.450.00 has been debited from your a/c **1234 on 05-04-2026 for UPI/Swiggy/xyz",
     "HtmlBody": ""
@@ -181,7 +181,7 @@ Open the app → Device Sync → tap **Sync Now** → transactions should appear
 - Check Railway logs → see if webhook is being hit
 
 ### DNS not propagated
-- Run `dig MX mail.yourdomain.com` — should show `inbound.postmarkapp.com`
+- Run `dig MX mail.thechetanjain.com` — should show `inbound.postmarkapp.com`
 - If not, wait and retry. Check you added the MX record to the correct DNS provider
 
 ### Emails parsed but no transactions in app

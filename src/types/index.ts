@@ -24,9 +24,17 @@ export type ParsedTransaction = {
 	type: "income" | "expense";
 };
 
+export type PostmarkEmailAddress = {
+	Email: string;
+	Name: string;
+	MailboxHash?: string;
+};
+
 export type PostmarkInboundEmail = {
 	From: string;
-	ToFull: { Email: string; Name: string }[];
+	ToFull: PostmarkEmailAddress[];
+	BccFull?: PostmarkEmailAddress[];
+	OriginalRecipient?: string;
 	Subject: string;
 	TextBody: string;
 	HtmlBody: string;

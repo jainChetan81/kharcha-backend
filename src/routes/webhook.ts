@@ -26,18 +26,31 @@ webhook.post("/email/:token", async (c) => {
 	console.log("[webhook] body:", rawBody.slice(0, 800));
 
 	const body = JSON.parse(rawBody) as PostmarkInboundEmail;
-	const { From, ToFull, TextBody } = body;
+	const {
+		From,
+		ToFull,
+		BccFull,
+		OriginalRecipient,
+		Subject,
+		TextBody,
+		HtmlBody,
+	} = body;
 
 	console.log(
-		`[webhook] From=${From} ToFull=${JSON.stringify(ToFull)} TextBody=${TextBody?.slice(0, 100)}`,
+		`[webhook] From=${From} ToFull=${JSON.stringify(ToFull)} BccFull=${JSON.stringify(BccFull)} Subject=${Subject?.slice(0, 100)}`,
 	);
 
-	if (!From || !ToFull?.length || !TextBody) {
-		console.log("[webhook] skipped — missing fields");
+	if (!From) {
+		console.log("[webhook] skipped — missing From");
 		return c.json({ ok: true, parsed: false, message: "Missing fields" });
 	}
 
-	const toEmail = ToFull[0].Email;
+	// Gmail forwarding puts the sync+ address in Bcc, not To
+	// Check ToFull first, then BccFull, then OriginalRecipient
+	const allRecipients = [...(ToFull || []), ...(BccFull || [])];
+	const syncRecipient = allRecipients.find((r) => /sync\+[^@]+@/.test(r.Email));
+	const toEmail =
+		syncRecipient?.Email || OriginalRecipient || ToFull?.[0]?.Email || "";
 	console.log(`[webhook] toEmail=${toEmail}`);
 
 	const toMatch = toEmail.match(/sync\+([^@]+)@/);
@@ -67,7 +80,25 @@ webhook.post("/email/:token", async (c) => {
 	console.log(
 		`[webhook] device found: ${device.device_id}, parsing email from=${From}`,
 	);
-	const parsed = parseEmail(From, TextBody);
+
+	const OTP_KEYWORDS = ["otp", "one time password", "verification code"];
+	const subjectLower = (Subject || "").toLowerCase();
+	const bodyLower = (TextBody || HtmlBody || "").toLowerCase();
+	if (
+		OTP_KEYWORDS.some(
+			(kw) => subjectLower.includes(kw) || bodyLower.includes(kw),
+		)
+	) {
+		console.log(`[webhook] skipped — OTP/verification email`);
+		return c.json({ ok: true, parsed: false, message: "OTP email" });
+	}
+
+	// Try Subject first, then TextBody, then HtmlBody
+	const emailBody = TextBody || HtmlBody || "";
+	let parsed = parseEmail(From, Subject, emailBody);
+	if (!parsed && emailBody !== TextBody && TextBody) {
+		parsed = parseEmail(From, Subject, TextBody);
+	}
 	console.log(
 		`[webhook] parse result: ${parsed ? `${parsed.amount} at ${parsed.merchant}` : "null"}`,
 	);

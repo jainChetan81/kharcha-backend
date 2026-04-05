@@ -61,6 +61,32 @@ const axisCreditCard: Parser = (body) => {
 	};
 };
 
+// subject line: "INR 1.00 was debited from your A/c no. XX0532."
+const axisSubjectDebit: Parser = (body) => {
+	const match = body.match(/INR ([\d,]+\.?\d*) was debited/i);
+	if (!match) return null;
+
+	return {
+		amount: parseAmount(match[1]),
+		merchant: "Bank Debit",
+		date: today(),
+		type: "expense",
+	};
+};
+
+// subject line: "INR 1.00 was credited to your A/c no. XX0532."
+const axisSubjectCredit: Parser = (body) => {
+	const match = body.match(/INR ([\d,]+\.?\d*) was credited/i);
+	if (!match) return null;
+
+	return {
+		amount: parseAmount(match[1]),
+		merchant: "Bank Credit",
+		date: today(),
+		type: "income",
+	};
+};
+
 // generic fallback: "spent/debited INR X at merchant on DD-MM-YY"
 const axisGenericDebit: Parser = (body) => {
 	const amountMatch = body.match(
@@ -84,4 +110,6 @@ export const AXIS_PARSERS: Parser[] = [
 	axisUpiCredit,
 	axisCreditCard,
 	axisGenericDebit,
+	axisSubjectDebit,
+	axisSubjectCredit,
 ];

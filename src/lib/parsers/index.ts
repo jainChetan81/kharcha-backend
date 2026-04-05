@@ -2,10 +2,11 @@ import type { ParsedTransaction } from "../../types";
 import { AXIS_PARSERS } from "./axis";
 import { HDFC_PARSERS } from "./hdfc";
 import { INDUSIND_PARSERS } from "./indusind";
-import { decodeHtmlEntities, tryParsers } from "./utils";
+import { decodeHtmlEntities, type Parser, tryParsers } from "./utils";
 
 export function parseEmail(
 	from: string,
+	subject: string,
 	body: string,
 ): ParsedTransaction | null {
 	// Gmail forwarding changes From to the user's Gmail address
@@ -21,8 +22,17 @@ export function parseEmail(
 
 	const decoded = decodeHtmlEntities(body);
 
-	if (sender.includes("axis")) return tryParsers(AXIS_PARSERS, decoded);
-	if (sender.includes("hdfc")) return tryParsers(HDFC_PARSERS, decoded);
-	if (sender.includes("indusind")) return tryParsers(INDUSIND_PARSERS, decoded);
-	return null;
+	let parsers: Parser[] = [];
+	if (sender.includes("axis")) parsers = AXIS_PARSERS;
+	else if (sender.includes("hdfc")) parsers = HDFC_PARSERS;
+	else if (sender.includes("indusind")) parsers = INDUSIND_PARSERS;
+	else return null;
+
+	// Try subject first, then body
+	if (subject) {
+		const fromSubject = tryParsers(parsers, subject);
+		if (fromSubject) return fromSubject;
+	}
+
+	return tryParsers(parsers, decoded);
 }

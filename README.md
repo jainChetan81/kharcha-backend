@@ -9,7 +9,7 @@ Bank (Axis/HDFC)
   │
   │ sends transaction alert email
   ▼
-Gmail ──► forwards to sync+token@kharcha.app
+Gmail ──► forwards to sync+<token>@mail.thechetanjain.com
               │
               ▼
          Postmark (inbound email service)
@@ -39,7 +39,7 @@ Gmail ──► forwards to sync+token@kharcha.app
 
 ### Full Flow
 
-1. **Register** — mobile app sends `device_id` to `POST /register`. Backend generates a unique forwarding email (e.g. `sync+abc123@kharcha.app`) and stores the device.
+1. **Register** — mobile app sends `device_id` to `POST /register`. Backend generates a unique forwarding email (e.g. `sync+ad84c56da3fa44c0@mail.thechetanjain.com`) and stores the device.
 
 2. **Set up forwarding** — user copies the forwarding email from the app and adds it as a forwarding address in Gmail settings. Bank alert emails now get forwarded to Postmark.
 
@@ -111,7 +111,7 @@ Register a device. Returns a unique forwarding email for Postmark routing. Idemp
 **Response (201 new / 200 existing):**
 
 ```json
-{ "forwarding_email": "sync+a1b2c3d4e5f6a1b2@kharcha.app" }
+{ "forwarding_email": "sync+ad84c56da3fa44c0@mail.thechetanjain.com" }
 ```
 
 ### `GET /sync`
@@ -219,7 +219,7 @@ Quick summary:
 | `DATABASE_URL` | — | Yes | PostgreSQL connection string |
 | `PORT` | `3000` | No | HTTP server port |
 | `POSTMARK_WEBHOOK_TOKEN` | — | Yes | Secret path segment for Postmark webhook URL |
-| `EMAIL_DOMAIN` | `kharcha.app` | No | Domain for forwarding emails |
+| `EMAIL_DOMAIN` | `mail.thechetanjain.com` | No | Domain for forwarding emails |
 | `GMAIL_SYNC_ENABLED_FOR` | `""` | No | Comma-separated usernames with Gmail Sync access |
 
 ## Scripts
