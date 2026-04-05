@@ -15,14 +15,26 @@ const webhook = new Hono();
 // We validate the webhook token, find the device by forwarding email,
 // parse the bank transaction from the email body, and store it
 webhook.post("/email", async (c) => {
+	// TODO: remove after debugging — logs raw request details
+	const headers = Object.fromEntries(c.req.raw.headers.entries());
+	const rawBody = await c.req.text();
+	console.log("[webhook] === RAW REQUEST ===");
+	console.log("[webhook] headers:", JSON.stringify(headers, null, 2));
+	console.log("[webhook] body preview:", rawBody.slice(0, 500));
+	console.log("[webhook] === END RAW ===");
+
+	// Re-parse body since we consumed it with .text()
+	const body = JSON.parse(rawBody) as PostmarkInboundEmail;
+
 	const token = c.req.header(HEADERS.POSTMARK_TOKEN);
 
 	if (token !== env.POSTMARK_WEBHOOK_TOKEN) {
-		console.warn("[webhook] rejected — invalid token");
+		console.warn(
+			`[webhook] rejected — invalid token: got "${token ?? "none"}"`,
+		);
 		throw new HTTPException(401, { message: "Invalid webhook token" });
 	}
 
-	const body = await c.req.json<PostmarkInboundEmail>();
 	const { From, ToFull, TextBody } = body;
 
 	if (!From || !ToFull?.length || !TextBody) {
