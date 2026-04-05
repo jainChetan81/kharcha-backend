@@ -14,7 +14,7 @@ Gmail ──► forwards to sync+token@kharcha.app
               ▼
          Postmark (inbound email service)
               │
-              │ POST /webhook/email
+              │ POST /webhook/email/:token
               ▼
       ┌──────────────────┐
       │  kharcha-backend  │
@@ -43,7 +43,7 @@ Gmail ──► forwards to sync+token@kharcha.app
 
 2. **Set up forwarding** — user copies the forwarding email from the app and adds it as a forwarding address in Gmail settings. Bank alert emails now get forwarded to Postmark.
 
-3. **Webhook** — Postmark receives the forwarded email and hits `POST /webhook/email`. Backend extracts the device from the `To` address, parses the email body (Axis Bank UPI / HDFC credit card), and inserts a transaction into Postgres.
+3. **Webhook** — Postmark receives the forwarded email and hits `POST /webhook/email/:token`. Backend validates the secret token in the URL path, extracts the device from the `ToFull` address, parses the email body (Axis Bank UPI / HDFC credit card), and inserts a transaction into Postgres.
 
 4. **Sync** — mobile app calls `GET /sync` with `x-device-id` header. Backend returns all transactions created since `last_synced_at`, marks them as fetched. App inserts them into local SQLite.
 
@@ -166,17 +166,17 @@ Returns feature flags for the mobile app. Used to control which features are vis
 
 The mobile app checks if the current user's name is in `gmail_sync_enabled_for` — if yes, the Gmail Sync row appears in the profile screen. Controlled via `GMAIL_SYNC_ENABLED_FOR` env var (comma-separated list of usernames).
 
-### `POST /webhook/email`
+### `POST /webhook/email/:token`
 
-Postmark inbound email webhook. Validates token, resolves device from `To` address, parses bank email, stores transaction.
+Postmark inbound email webhook. Auth via secret path segment — the `POSTMARK_WEBHOOK_TOKEN` value is part of the URL path. No auth headers needed.
 
-**Headers:**
+**Example URL:**
 
 ```
-x-postmark-token: <POSTMARK_WEBHOOK_TOKEN>
+https://your-api.railway.app/webhook/email/your-secret-token-here
 ```
 
-**Request body:** Postmark inbound email JSON payload (uses `From`, `To`, `TextBody`).
+**Request body:** Postmark inbound email JSON payload (uses `From`, `ToFull`, `TextBody`).
 
 **Response:**
 
@@ -200,8 +200,7 @@ Returns `{ "ok": true, "parsed": false }` if the email format is not recognized.
 3. Configure Postmark:
    - Set up inbound domain (`kharcha.app`)
    - Point MX records to Postmark's inbound servers
-   - Set webhook URL to `https://your-api.railway.app/webhook/email`
-   - Set `POSTMARK_WEBHOOK_TOKEN` env var to match
+   - Set webhook URL to `https://your-api.railway.app/webhook/email/<POSTMARK_WEBHOOK_TOKEN>`
 
 ## Deploy to Railway
 
@@ -217,7 +216,7 @@ Returns `{ "ok": true, "parsed": false }` if the email format is not recognized.
 |----------|---------|----------|-------------|
 | `DATABASE_URL` | — | Yes | PostgreSQL connection string |
 | `PORT` | `3000` | No | HTTP server port |
-| `POSTMARK_WEBHOOK_TOKEN` | — | Yes | Secret for validating Postmark webhooks |
+| `POSTMARK_WEBHOOK_TOKEN` | — | Yes | Secret path segment for Postmark webhook URL |
 | `EMAIL_DOMAIN` | `kharcha.app` | No | Domain for forwarding emails |
 | `GMAIL_SYNC_ENABLED_FOR` | `""` | No | Comma-separated usernames with Gmail Sync access |
 
