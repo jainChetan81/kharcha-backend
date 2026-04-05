@@ -84,12 +84,7 @@ webhook.post("/email/:token", async (c) => {
 
 	const OTP_KEYWORDS = ["otp", "one time password", "verification code"];
 	const subjectLower = (Subject || "").toLowerCase();
-	const bodyLower = (TextBody || HtmlBody || "").toLowerCase();
-	if (
-		OTP_KEYWORDS.some(
-			(kw) => subjectLower.includes(kw) || bodyLower.includes(kw),
-		)
-	) {
+	if (OTP_KEYWORDS.some((kw) => subjectLower.includes(kw))) {
 		console.log(`[webhook] skipped — OTP/verification email`);
 		return c.json({ ok: true, parsed: false, message: "OTP email" });
 	}
