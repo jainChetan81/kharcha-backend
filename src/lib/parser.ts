@@ -66,7 +66,16 @@ export function parseEmail(
 	from: string,
 	body: string,
 ): ParsedTransaction | null {
-	const sender = from.toLowerCase();
+	// Gmail forwarding changes From to the user's Gmail address
+	// Extract the original sender from the forwarded message body
+	const originalSenderMatch = body.match(
+		/From:.*?<([^>]+)>|From:\s*(\S+@\S+)/im,
+	);
+	const sender = (
+		originalSenderMatch?.[1] ??
+		originalSenderMatch?.[2] ??
+		from
+	).toLowerCase();
 
 	if (sender.includes("axisbank") || sender.includes("axis bank")) {
 		return parseAxisBank(body);
