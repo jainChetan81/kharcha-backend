@@ -195,12 +195,14 @@ Returns `{ "ok": true, "parsed": false }` if the email format is not recognized.
 
 ## Postmark Setup
 
-1. Register a device via `POST /register` to get a forwarding email
-2. Add the forwarding email in Gmail settings (Settings > Forwarding)
-3. Configure Postmark:
-   - Set up inbound domain (`kharcha.app`)
-   - Point MX records to Postmark's inbound servers
-   - Set webhook URL to `https://your-api.railway.app/webhook/email/<POSTMARK_WEBHOOK_TOKEN>`
+See the full step-by-step guide: **[docs/postmark-setup.md](docs/postmark-setup.md)**
+
+Quick summary:
+
+1. Add MX record for `mail.yourdomain.com` → `inbound.postmarkapp.com`
+2. Configure Postmark inbound stream with your domain and webhook URL
+3. Register device in app → get forwarding email
+4. Add forwarding email in Gmail settings
 
 ## Deploy to Railway
 

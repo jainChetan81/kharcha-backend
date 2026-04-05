@@ -22,22 +22,36 @@ webhook.post("/email/:token", async (c) => {
 		throw new HTTPException(401, { message: "Invalid webhook token" });
 	}
 
-	const body = await c.req.json<PostmarkInboundEmail>();
+	const rawBody = await c.req.text();
+	console.log("[webhook] body:", rawBody.slice(0, 800));
+
+	const body = JSON.parse(rawBody) as PostmarkInboundEmail;
 	const { From, ToFull, TextBody } = body;
 
+	console.log(
+		`[webhook] From=${From} ToFull=${JSON.stringify(ToFull)} TextBody=${TextBody?.slice(0, 100)}`,
+	);
+
 	if (!From || !ToFull?.length || !TextBody) {
-		throw new HTTPException(400, {
-			message: "Missing required fields: From, ToFull, TextBody",
-		});
+		console.log("[webhook] skipped — missing fields");
+		return c.json({ ok: true, parsed: false, message: "Missing fields" });
 	}
 
 	const toEmail = ToFull[0].Email;
+	console.log(`[webhook] toEmail=${toEmail}`);
+
 	const toMatch = toEmail.match(/sync\+([^@]+)@/);
 	if (!toMatch) {
-		throw new HTTPException(400, { message: "Invalid forwarding address" });
+		console.log(`[webhook] skipped — not a forwarding address: ${toEmail}`);
+		return c.json({
+			ok: true,
+			parsed: false,
+			message: "Not a forwarding address",
+		});
 	}
 
 	const forwardingEmail = toEmail;
+	console.log(`[webhook] looking up device for: ${forwardingEmail}`);
 
 	const [device] = await db
 		.select()
@@ -46,18 +60,19 @@ webhook.post("/email/:token", async (c) => {
 		.limit(1);
 
 	if (!device) {
-		throw new HTTPException(404, {
-			message: "Device not found for this forwarding address",
-		});
+		console.log(`[webhook] no device found for: ${forwardingEmail}`);
+		return c.json({ ok: true, parsed: false, message: "Device not found" });
 	}
 
+	console.log(`[webhook] device found: ${device.device_id}`);
 	const parsed = parseEmail(From, TextBody);
 
 	if (!parsed) {
+		console.log(`[webhook] could not parse email from ${From}`);
 		return c.json({
 			ok: true,
 			parsed: false,
-			message: "Could not parse transaction from email",
+			message: "Could not parse transaction",
 		});
 	}
 
@@ -71,6 +86,9 @@ webhook.post("/email/:token", async (c) => {
 		source_type: SOURCE_TYPE.SYNCED,
 	});
 
+	console.log(
+		`[webhook] saved: ${parsed.amount} at ${parsed.merchant} for ${device.device_id}`,
+	);
 	return c.json({ ok: true, parsed: true });
 });
 
