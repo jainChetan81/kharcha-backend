@@ -5,6 +5,7 @@ import { db } from "../db";
 import { devices, transactions } from "../db/schema";
 import { SOURCE_TYPE } from "../lib/constants";
 import { env } from "../lib/env";
+import { parseWithGemini } from "../lib/gemini";
 import { parseEmail } from "../lib/parsers";
 import type { PostmarkInboundEmail } from "../types";
 
@@ -93,14 +94,24 @@ webhook.post("/email/:token", async (c) => {
 		return c.json({ ok: true, parsed: false, message: "OTP email" });
 	}
 
-	// Try Subject first, then TextBody, then HtmlBody
+	// Try regex parsers first (Subject + body combinations)
 	const emailBody = TextBody || HtmlBody || "";
 	let parsed = parseEmail(From, Subject, emailBody);
 	if (!parsed && emailBody !== TextBody && TextBody) {
 		parsed = parseEmail(From, Subject, TextBody);
 	}
+
+	let parsedBy = parsed ? "regex" : null;
+
+	// Gemini fallback — single attempt after all regex fails
+	if (!parsed) {
+		console.log("[webhook] regex parsers failed, trying Gemini fallback");
+		parsed = await parseWithGemini(Subject, TextBody || HtmlBody || "");
+		if (parsed) parsedBy = "gemini";
+	}
+
 	console.log(
-		`[webhook] parse result: ${parsed ? `${parsed.amount} at ${parsed.merchant}` : "null"}`,
+		`[webhook] parse result: ${parsed ? `${parsed.amount} at ${parsed.merchant} (${parsedBy})` : "null"}`,
 	);
 
 	if (!parsed) {
