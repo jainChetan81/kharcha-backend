@@ -31,29 +31,32 @@ export async function parseWithGemini(
 	subject: string,
 	body: string,
 ): Promise<ParsedTransaction | null> {
-	if (!env.GEMINI_API_KEY) return null;
+	if (!env.EXPO_PUBLIC_GEMINI_API_KEY) return null;
 
 	const cleanBody = stripHtml(body).slice(0, 4000);
 
-	const response = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			contents: [
-				{
-					parts: [
-						{
-							text: `${PROMPT}\n\nSubject: ${subject}\n\nBody:\n${cleanBody}`,
-						},
-					],
+	const response = await fetch(
+		`${GEMINI_URL}?key=${env.EXPO_PUBLIC_GEMINI_API_KEY}`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				contents: [
+					{
+						parts: [
+							{
+								text: `${PROMPT}\n\nSubject: ${subject}\n\nBody:\n${cleanBody}`,
+							},
+						],
+					},
+				],
+				generationConfig: {
+					temperature: 0,
+					maxOutputTokens: 200,
 				},
-			],
-			generationConfig: {
-				temperature: 0,
-				maxOutputTokens: 200,
-			},
-		}),
-	});
+			}),
+		},
+	);
 
 	if (!response.ok) {
 		console.log(
