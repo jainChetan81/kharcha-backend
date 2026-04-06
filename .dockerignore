@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.github
+.env*
+*.local
+*.md
+.DS_Store
+.claude
+.cursor
+.vscode
+docker-compose.yml
+lefthook.yml
+biome.json
+tsconfig.json
+*.pem
+docs/

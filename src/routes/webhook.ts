@@ -3,11 +3,13 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
 import { devices, transactions } from "../db/schema";
-import { SOURCE_TYPE } from "../lib/constants";
+import { ERROR_MESSAGES, SOURCE_TYPE } from "../lib/constants";
 import { env } from "../lib/env";
 import { parseWithGemini } from "../lib/gemini";
 import { parseEmail } from "../lib/parsers";
 import type { PostmarkInboundEmail } from "../types";
+
+const OTP_KEYWORDS = ["otp", "one time password", "verification code"];
 
 const webhook = new Hono();
 
@@ -20,7 +22,9 @@ webhook.post("/email/:token", async (c) => {
 	const token = c.req.param("token");
 
 	if (token !== env.POSTMARK_WEBHOOK_TOKEN) {
-		throw new HTTPException(401, { message: "Invalid webhook token" });
+		throw new HTTPException(401, {
+			message: ERROR_MESSAGES.INVALID_WEBHOOK_TOKEN,
+		});
 	}
 
 	const rawBody = await c.req.text();
@@ -42,8 +46,11 @@ webhook.post("/email/:token", async (c) => {
 	);
 
 	if (!From) {
-		console.log("[webhook] skipped — missing From");
-		return c.json({ ok: true, parsed: false, message: "Missing fields" });
+		return c.json({
+			ok: true,
+			parsed: false,
+			message: ERROR_MESSAGES.MISSING_FIELDS,
+		});
 	}
 
 	// Gmail forwarding puts the sync+ address in Bcc, not To
@@ -52,20 +59,17 @@ webhook.post("/email/:token", async (c) => {
 	const syncRecipient = allRecipients.find((r) => /sync\+[^@]+@/.test(r.Email));
 	const toEmail =
 		syncRecipient?.Email || OriginalRecipient || ToFull?.[0]?.Email || "";
-	console.log(`[webhook] toEmail=${toEmail}`);
 
 	const toMatch = toEmail.match(/sync\+([^@]+)@/);
 	if (!toMatch) {
-		console.log(`[webhook] skipped — not a forwarding address: ${toEmail}`);
 		return c.json({
 			ok: true,
 			parsed: false,
-			message: "Not a forwarding address",
+			message: ERROR_MESSAGES.NOT_FORWARDING_ADDRESS,
 		});
 	}
 
 	const forwardingEmail = toEmail;
-	console.log(`[webhook] looking up device for: ${forwardingEmail}`);
 
 	const [device] = await db
 		.select()
@@ -74,19 +78,20 @@ webhook.post("/email/:token", async (c) => {
 		.limit(1);
 
 	if (!device) {
-		console.log(`[webhook] no device found for: ${forwardingEmail}`);
-		return c.json({ ok: true, parsed: false, message: "Device not found" });
+		return c.json({
+			ok: true,
+			parsed: false,
+			message: ERROR_MESSAGES.DEVICE_NOT_FOUND,
+		});
 	}
 
-	console.log(
-		`[webhook] device found: ${device.device_id}, parsing email from=${From}`,
-	);
-
-	const OTP_KEYWORDS = ["otp", "one time password", "verification code"];
 	const subjectLower = (Subject || "").toLowerCase();
 	if (OTP_KEYWORDS.some((kw) => subjectLower.includes(kw))) {
-		console.log(`[webhook] skipped — OTP/verification email`);
-		return c.json({ ok: true, parsed: false, message: "OTP email" });
+		return c.json({
+			ok: true,
+			parsed: false,
+			message: ERROR_MESSAGES.OTP_EMAIL,
+		});
 	}
 
 	// Try regex parsers first (Subject + body combinations)
@@ -110,17 +115,16 @@ webhook.post("/email/:token", async (c) => {
 	);
 
 	if (!parsed) {
-		console.log(`[webhook] could not parse email from ${From}`);
 		return c.json({
 			ok: true,
 			parsed: false,
-			message: "Could not parse transaction",
+			message: ERROR_MESSAGES.UNPARSEABLE_EMAIL,
 		});
 	}
 
 	await db.insert(transactions).values({
 		device_id: device.device_id,
-		amount: parsed.amount,
+		amount: String(parsed.amount),
 		merchant: parsed.merchant,
 		date: parsed.date,
 		type: parsed.type,

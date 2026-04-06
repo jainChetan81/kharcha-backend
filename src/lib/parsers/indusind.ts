@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPE } from "../constants";
 import { type Parser, parseAmount, parseAxisDate, today } from "./utils";
 
 // "Debited for INR 200.00 towards UPI/140853857998/DR/TRIS/FDRL/..."
@@ -11,7 +12,7 @@ const indusindUpiDebit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: upiMatch ? upiMatch[1].trim() : "UPI Payment",
 		date: today(),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 
@@ -26,7 +27,7 @@ const indusindUpiCredit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: upiMatch ? upiMatch[1].trim() : "Credit",
 		date: today(),
-		type: "income",
+		type: TRANSACTION_TYPE.INCOME,
 	};
 };
 
@@ -44,7 +45,7 @@ const indusindImpsCredit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: fromMatch ? fromMatch[1].trim() : "IMPS Credit",
 		date: dateMatch ? parseAxisDate(dateMatch[1]) : today(),
-		type: "income",
+		type: TRANSACTION_TYPE.INCOME,
 	};
 };
 
@@ -63,7 +64,7 @@ const indusindGenericDebit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant,
 		date: today(),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 

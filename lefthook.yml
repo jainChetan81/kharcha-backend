@@ -1,11 +1,11 @@
 pre-commit:
   commands:
     format:
-      glob: "*.{js,ts}"
+      glob: "*.{js,ts,jsx,tsx,json,jsonc}"
       run: bunx biome format --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true
     lint:
-      glob: "*.{js,ts}"
+      glob: "*.{js,ts,jsx,tsx,json,jsonc}"
       run: bunx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
 
 pre-push:

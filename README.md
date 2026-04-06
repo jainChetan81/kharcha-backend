@@ -5,7 +5,7 @@ Backend API for [Kharcha](https://github.com/jainChetan81/Kharcha) — a persona
 ## How It Works
 
 ```text
-Bank (Axis/HDFC)
+Bank (Axis/HDFC/IndusInd)
   │
   │ sends transaction alert email
   ▼
@@ -49,13 +49,30 @@ Gmail ──► forwards to sync+<token>@mail.thechetanjain.com
 
 ## Tech Stack
 
-- **Runtime:** [Bun](https://bun.sh)
+- **Runtime:** [Bun](https://bun.sh) (>= 1.2.0)
 - **Framework:** [Hono](https://hono.dev)
 - **ORM:** [Drizzle ORM](https://orm.drizzle.team) + PostgreSQL
+- **AI Fallback:** Google Gemini 1.5 Flash (for unparseable emails)
 - **Infrastructure:** Docker Compose
 - **Lint/Format:** [Biome](https://biomejs.dev)
 
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- [Bun](https://bun.sh) (>= 1.2.0) — for host-machine scripts like `db:studio`, `lint`, `typecheck`
+
 ## Running Locally
+
+### 1. Set up environment
+
+```bash
+# Copy the example env file — edit values as needed
+cp .env.example .env.local
+```
+
+> **Important:** The `DATABASE_URL` in `.env.example` uses `postgres` as the hostname (Docker service name). This is correct for running inside Docker. For host-machine tools like `db:studio`, use `localhost` instead.
+
+### 2. Start the stack
 
 ```bash
 # Start everything (API on :3000 + Postgres on :5432)
@@ -188,10 +205,13 @@ Returns `{ "ok": true, "parsed": false }` if the email format is not recognized.
 
 ## Supported Banks
 
-| Bank      | Email Format              | Transaction Types |
-|-----------|---------------------------|-------------------|
-| Axis Bank | UPI debit/credit alerts   | expense, income   |
-| HDFC Bank | Credit card charge alerts | expense           |
+| Bank        | Email Format                     | Transaction Types |
+|-------------|----------------------------------|-------------------|
+| Axis Bank   | UPI debit/credit, credit card    | expense, income   |
+| HDFC Bank   | Debit alerts                     | expense           |
+| IndusInd    | UPI debit/credit, IMPS credit    | expense, income   |
+
+Emails from unrecognized senders fall back to **Gemini AI parsing** (if `GEMINI_API_KEY` is set).
 
 ## Postmark Setup
 
@@ -211,6 +231,7 @@ Quick summary:
 3. Add a service from the `kharcha-backend` directory
 4. Set environment variables (see below)
 5. Deploy — Railway detects the Dockerfile automatically
+6. **Run migrations separately:** `railway run bunx drizzle-kit push` (migrations no longer run automatically on container start)
 
 ## Environment Variables
 
@@ -221,6 +242,7 @@ Quick summary:
 | `POSTMARK_WEBHOOK_TOKEN` | — | Yes | Secret path segment for Postmark webhook URL |
 | `EMAIL_DOMAIN` | `mail.thechetanjain.com` | No | Domain for forwarding emails |
 | `GMAIL_SYNC_ENABLED_FOR` | `""` | No | Comma-separated usernames with Gmail Sync access |
+| `GEMINI_API_KEY` | `""` | No | Google Gemini API key for AI fallback parsing |
 
 ## Scripts
 

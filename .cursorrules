@@ -1,0 +1,17 @@
+You are working on kharcha-backend, a Bun + Hono + Drizzle ORM backend API.
+
+Key conventions:
+- Runtime: Bun (not Node.js)
+- Framework: Hono for HTTP
+- ORM: Drizzle ORM with PostgreSQL
+- Linter/Formatter: Biome (tabs, double quotes)
+- All string constants go in src/lib/constants.ts (error messages, headers, enums)
+- Transaction types use TRANSACTION_TYPE constant and pgEnum in schema
+- Route handlers should be thin — extract business logic to lib/
+- Use Drizzle's query builder, avoid raw SQL
+- Monetary amounts are numeric(12,2) in the database
+- Always validate user input at route boundaries
+- Wrap multi-step DB operations in db.transaction()
+- Bank email parsers live in src/lib/parsers/ — one file per bank
+- Gemini AI fallback in src/lib/gemini.ts for unparseable emails
+- Run `bun run quality` (lint + typecheck) before committing

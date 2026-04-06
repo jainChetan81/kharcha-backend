@@ -19,5 +19,5 @@ export const env = {
 		.split(",")
 		.map((s) => s.trim())
 		.filter(Boolean),
-	EXPO_PUBLIC_GEMINI_API_KEY: optional("EXPO_PUBLIC_GEMINI_API_KEY", ""),
+	GEMINI_API_KEY: optional("GEMINI_API_KEY", ""),
 } as const;

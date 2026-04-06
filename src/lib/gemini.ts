@@ -1,4 +1,5 @@
 import type { ParsedTransaction } from "../types";
+import { TRANSACTION_TYPE, type TransactionType } from "./constants";
 import { env } from "./env";
 
 const GEMINI_URL =
@@ -14,6 +15,11 @@ Return ONLY a raw JSON object with these exact fields, no markdown, no explanati
 }
 
 If this is NOT a bank transaction email, return the word null and nothing else.`;
+
+const VALID_TYPES = new Set<string>([
+	TRANSACTION_TYPE.INCOME,
+	TRANSACTION_TYPE.EXPENSE,
+]);
 
 function stripHtml(html: string): string {
 	return html
@@ -31,32 +37,29 @@ export async function parseWithGemini(
 	subject: string,
 	body: string,
 ): Promise<ParsedTransaction | null> {
-	if (!env.EXPO_PUBLIC_GEMINI_API_KEY) return null;
+	if (!env.GEMINI_API_KEY) return null;
 
 	const cleanBody = stripHtml(body).slice(0, 4000);
 
-	const response = await fetch(
-		`${GEMINI_URL}?key=${env.EXPO_PUBLIC_GEMINI_API_KEY}`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				contents: [
-					{
-						parts: [
-							{
-								text: `${PROMPT}\n\nSubject: ${subject}\n\nBody:\n${cleanBody}`,
-							},
-						],
-					},
-				],
-				generationConfig: {
-					temperature: 0,
-					maxOutputTokens: 200,
+	const response = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			contents: [
+				{
+					parts: [
+						{
+							text: `${PROMPT}\n\nSubject: ${subject}\n\nBody:\n${cleanBody}`,
+						},
+					],
 				},
-			}),
-		},
-	);
+			],
+			generationConfig: {
+				temperature: 0,
+				maxOutputTokens: 200,
+			},
+		}),
+	});
 
 	if (!response.ok) {
 		console.log(
@@ -77,7 +80,7 @@ export async function parseWithGemini(
 		if (
 			typeof parsed.amount !== "number" ||
 			parsed.amount <= 0 ||
-			!["income", "expense"].includes(parsed.type) ||
+			!VALID_TYPES.has(parsed.type) ||
 			!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)
 		) {
 			console.log("[gemini] validation failed:", parsed);
@@ -88,7 +91,7 @@ export async function parseWithGemini(
 			amount: parsed.amount,
 			merchant: parsed.merchant || "Unknown",
 			date: parsed.date,
-			type: parsed.type,
+			type: parsed.type as TransactionType,
 		};
 	} catch {
 		console.log("[gemini] failed to parse response:", text.slice(0, 200));

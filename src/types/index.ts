@@ -1,5 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { devices, transactions } from "../db/schema";
+import type { TransactionType } from "../lib/constants";
 
 export type Device = InferSelectModel<typeof devices>;
 export type Transaction = InferSelectModel<typeof transactions>;
@@ -21,7 +22,7 @@ export type ParsedTransaction = {
 	amount: number;
 	merchant: string;
 	date: string;
-	type: "income" | "expense";
+	type: TransactionType;
 };
 
 export type PostmarkEmailAddress = {

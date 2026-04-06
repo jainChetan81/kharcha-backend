@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPE } from "../constants";
 import { type Parser, parseAmount, parseHdfcDate } from "./utils";
 
 // "Rs.X debited from your HDFC Bank ... ending 1234 towards merchant on DD Mon, YYYY"
@@ -12,7 +13,7 @@ const hdfcDebit: Parser = (body) => {
 		amount: parseAmount(match[1]),
 		merchant: match[3].trim(),
 		date: parseHdfcDate(match[4]),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 

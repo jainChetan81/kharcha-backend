@@ -2,39 +2,36 @@ name: Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-production
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-
-      - name: install dependencies
-        run: bun install
-
-      - name: lint
-        run: bun run lint
-
-      - name: typecheck
-        run: bun run typecheck
+          bun-version: "1.2.4"
 
       - name: verify secrets
         run: |
-          if [ -z "$RAILWAY_TOKEN" ]; then echo "❌ RAILWAY_TOKEN not set"; exit 1; fi
-          if [ -z "$RAILWAY_PROJECT_ID" ]; then echo "❌ RAILWAY_PROJECT_ID not set"; exit 1; fi
-          echo "✅ All secrets loaded"
+          if [ -z "$RAILWAY_TOKEN" ]; then echo "RAILWAY_TOKEN not set"; exit 1; fi
+          if [ -z "$RAILWAY_PROJECT_ID" ]; then echo "RAILWAY_PROJECT_ID not set"; exit 1; fi
+          echo "All secrets loaded"
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: deploy to railway
-        run: bunx @railway/cli up --service kharcha-backend --environment production
+        run: bunx @railway/cli@3 up --service kharcha-backend --environment production
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}

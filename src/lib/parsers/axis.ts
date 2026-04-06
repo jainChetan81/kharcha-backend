@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPE } from "../constants";
 import { type Parser, parseAmount, parseAxisDate, today } from "./utils";
 
 // "Amount Debited: INR 75.00 ... Date & Time: 01-04-26, 19:03:35 ... Transaction Info: UPI/P2M/..."
@@ -14,7 +15,7 @@ const axisUpiDebit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: merchantMatch ? merchantMatch[1].trim() : "UPI Payment",
 		date: parseAxisDate(dateMatch[1]),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 
@@ -32,7 +33,7 @@ const axisUpiCredit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: merchantMatch ? merchantMatch[1].trim() : "Credit",
 		date: parseAxisDate(dateMatch[1]),
-		type: "income",
+		type: TRANSACTION_TYPE.INCOME,
 	};
 };
 
@@ -57,7 +58,7 @@ const axisCreditCard: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: merchantMatch ? merchantMatch[1].trim() : "Credit Card Payment",
 		date,
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 
@@ -70,7 +71,7 @@ const axisSubjectDebit: Parser = (body) => {
 		amount: parseAmount(match[1]),
 		merchant: "Bank Debit",
 		date: today(),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 
@@ -83,7 +84,7 @@ const axisSubjectCredit: Parser = (body) => {
 		amount: parseAmount(match[1]),
 		merchant: "Bank Credit",
 		date: today(),
-		type: "income",
+		type: TRANSACTION_TYPE.INCOME,
 	};
 };
 
@@ -101,7 +102,7 @@ const axisGenericDebit: Parser = (body) => {
 		amount: parseAmount(amountMatch[1]),
 		merchant: merchantMatch ? merchantMatch[1].trim() : "Card Payment",
 		date: parseAxisDate(dateMatch[1]),
-		type: "expense",
+		type: TRANSACTION_TYPE.EXPENSE,
 	};
 };
 
