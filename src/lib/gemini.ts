@@ -1,6 +1,6 @@
 import type { ParsedTransaction } from "../types";
-import { TRANSACTION_TYPE, type TransactionType } from "./constants";
 import { env } from "./env";
+import { parsedTransactionSchema } from "./validation";
 
 const GEMINI_URL =
 	"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
@@ -15,11 +15,6 @@ Return ONLY a raw JSON object with these exact fields, no markdown, no explanati
 }
 
 If this is NOT a bank transaction email, return the word null and nothing else.`;
-
-const VALID_TYPES = new Set<string>([
-	TRANSACTION_TYPE.INCOME,
-	TRANSACTION_TYPE.EXPENSE,
-]);
 
 function stripHtml(html: string): string {
 	return html
@@ -41,9 +36,12 @@ export async function parseWithGemini(
 
 	const cleanBody = stripHtml(body).slice(0, 4000);
 
-	const response = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+	const response = await fetch(GEMINI_URL, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			"x-goog-api-key": env.GEMINI_API_KEY,
+		},
 		body: JSON.stringify({
 			contents: [
 				{
@@ -77,22 +75,13 @@ export async function parseWithGemini(
 		const cleaned = text.replace(/```json|```/g, "").trim();
 		const parsed = JSON.parse(cleaned);
 
-		if (
-			typeof parsed.amount !== "number" ||
-			parsed.amount <= 0 ||
-			!VALID_TYPES.has(parsed.type) ||
-			!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)
-		) {
-			console.log("[gemini] validation failed:", parsed);
+		const validated = parsedTransactionSchema.safeParse(parsed);
+		if (!validated.success) {
+			console.log("[gemini] validation failed:", validated.error.message);
 			return null;
 		}
 
-		return {
-			amount: parsed.amount,
-			merchant: parsed.merchant || "Unknown",
-			date: parsed.date,
-			type: parsed.type as TransactionType,
-		};
+		return validated.data;
 	} catch {
 		console.log("[gemini] failed to parse response:", text.slice(0, 200));
 		return null;

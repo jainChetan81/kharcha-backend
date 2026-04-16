@@ -7,6 +7,7 @@ import { ERROR_MESSAGES, SOURCE_TYPE } from "../lib/constants";
 import { env } from "../lib/env";
 import { parseWithGemini } from "../lib/gemini";
 import { parseEmail } from "../lib/parsers";
+import { parsedTransactionSchema } from "../lib/validation";
 import type { PostmarkInboundEmail } from "../types";
 
 const OTP_KEYWORDS = ["otp", "one time password", "verification code"];
@@ -28,9 +29,14 @@ webhook.post("/email/:token", async (c) => {
 	}
 
 	const rawBody = await c.req.text();
-	console.log("[webhook] body:", rawBody.slice(0, 800));
+	console.log("[webhook] received email");
 
-	const body = JSON.parse(rawBody) as PostmarkInboundEmail;
+	let body: PostmarkInboundEmail;
+	try {
+		body = JSON.parse(rawBody) as PostmarkInboundEmail;
+	} catch {
+		return c.json({ ok: false, error: "Invalid JSON body" }, 400);
+	}
 	const {
 		From,
 		ToFull,
@@ -39,11 +45,10 @@ webhook.post("/email/:token", async (c) => {
 		Subject,
 		TextBody,
 		HtmlBody,
+		MessageID,
 	} = body;
 
-	console.log(
-		`[webhook] From=${From} ToFull=${JSON.stringify(ToFull)} BccFull=${JSON.stringify(BccFull)} Subject=${Subject?.slice(0, 100)}`,
-	);
+	const messageId = MessageID ?? null;
 
 	if (!From) {
 		return c.json({
@@ -59,6 +64,10 @@ webhook.post("/email/:token", async (c) => {
 	const syncRecipient = allRecipients.find((r) => /sync\+[^@]+@/.test(r.Email));
 	const toEmail =
 		syncRecipient?.Email || OriginalRecipient || ToFull?.[0]?.Email || "";
+
+	console.log(
+		`[webhook] from=${From.split("@")[1] ?? "unknown"} to=${toEmail.split("@")[0] ?? "unknown"}`,
+	);
 
 	const toMatch = toEmail.match(/sync\+([^@]+)@/);
 	if (!toMatch) {
@@ -122,18 +131,37 @@ webhook.post("/email/:token", async (c) => {
 		});
 	}
 
+	const validated = parsedTransactionSchema.safeParse(parsed);
+	if (!validated.success) {
+		console.log(`[webhook] validation failed: ${validated.error.message}`);
+		return c.json({ ok: true, parsed: false, message: "Validation failed" });
+	}
+
+	if (messageId) {
+		const [existing] = await db
+			.select({ id: transactions.id })
+			.from(transactions)
+			.where(eq(transactions.postmark_message_id, messageId))
+			.limit(1);
+		if (existing) {
+			console.log(`[webhook] duplicate message_id=${messageId}, skipping`);
+			return c.json({ ok: true, parsed: true, duplicate: true });
+		}
+	}
+
 	await db.insert(transactions).values({
 		device_id: device.device_id,
-		amount: String(parsed.amount),
-		merchant: parsed.merchant,
-		date: parsed.date,
-		type: parsed.type,
+		amount: String(validated.data.amount),
+		merchant: validated.data.merchant,
+		date: validated.data.date,
+		type: validated.data.type,
 		source: From,
 		source_type: SOURCE_TYPE.SYNCED,
+		postmark_message_id: messageId,
 	});
 
 	console.log(
-		`[webhook] saved: ${parsed.amount} at ${parsed.merchant} for ${device.device_id}`,
+		`[webhook] saved transaction for device=${device.device_id.slice(0, 8)}... (${parsedBy})`,
 	);
 	return c.json({ ok: true, parsed: true });
 });

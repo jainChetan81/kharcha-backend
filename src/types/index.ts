@@ -16,6 +16,12 @@ export type RegisterResponse = {
 export type SyncResponse = {
 	transactions: Transaction[];
 	last_synced_at: string;
+	pagination?: {
+		limit: number;
+		offset: number;
+		count: number;
+		has_more: boolean;
+	};
 };
 
 export type ParsedTransaction = {
@@ -39,6 +45,7 @@ export type PostmarkInboundEmail = {
 	Subject: string;
 	TextBody: string;
 	HtmlBody: string;
+	MessageID?: string;
 };
 
 export type AppEnv = {

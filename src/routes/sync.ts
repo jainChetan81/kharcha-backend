@@ -27,13 +27,18 @@ sync.get("/", async (c) => {
 		conditions.push(gt(transactions.created_at, date));
 	}
 
+	const limit = Math.max(1, Math.min(Number(c.req.query("limit")) || 100, 500));
+	const offset = Math.max(0, Number(c.req.query("offset")) || 0);
+
 	// Use a transaction to atomically fetch and mark rows
 	const rows = await db.transaction(async (tx) => {
 		const rows = await tx
 			.select()
 			.from(transactions)
 			.where(and(...conditions))
-			.orderBy(transactions.created_at);
+			.orderBy(transactions.created_at)
+			.limit(limit)
+			.offset(offset);
 
 		if (rows.length > 0) {
 			const ids = rows.map((r) => r.id);
@@ -49,6 +54,12 @@ sync.get("/", async (c) => {
 	return c.json<SyncResponse>({
 		transactions: rows,
 		last_synced_at: new Date().toISOString(),
+		pagination: {
+			limit,
+			offset,
+			count: rows.length,
+			has_more: rows.length === limit,
+		},
 	});
 });
 

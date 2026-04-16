@@ -1,9 +1,11 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { closeDatabase } from "./db";
 import { checkDatabase } from "./db/check";
 import { env } from "./lib/env";
+import { rateLimiter } from "./lib/rate-limit";
 import featureFlags from "./routes/feature-flags";
 import register from "./routes/register";
 import sync from "./routes/sync";
@@ -12,6 +14,22 @@ import webhook from "./routes/webhook";
 const app = new Hono();
 
 app.use("*", logger());
+
+if (process.env.NODE_ENV !== "production") {
+	app.use(
+		"*",
+		cors({
+			origin: ["http://localhost:8081", "http://localhost:8082"],
+			allowMethods: ["GET", "POST"],
+			allowHeaders: ["Content-Type", "x-device-id"],
+		}),
+	);
+}
+
+app.use("/register", rateLimiter({ windowMs: 60_000, max: 10 }));
+app.use("/webhook/*", rateLimiter({ windowMs: 60_000, max: 30 }));
+app.use("/sync", rateLimiter({ windowMs: 60_000, max: 30 }));
+app.use("/feature-flags", rateLimiter({ windowMs: 60_000, max: 60 }));
 
 app.get("/", (c) => c.json({ status: "ok", app: "kharcha-backend" }));
 

@@ -37,6 +37,7 @@ export const transactions = pgTable(
 		source: text("source"),
 		source_type: sourceTypeEnum("source_type").default("synced"),
 		note: text("note"),
+		postmark_message_id: text("postmark_message_id").unique(),
 		created_at: timestamp("created_at").defaultNow(),
 		fetched_at: timestamp("fetched_at"),
 	},
