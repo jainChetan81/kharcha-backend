@@ -7,10 +7,12 @@ export type Transaction = InferSelectModel<typeof transactions>;
 
 export type RegisterBody = {
 	device_id: string;
+	name?: string;
 };
 
 export type RegisterResponse = {
 	forwarding_email: string;
+	name: string | null;
 };
 
 export type SyncResponse = {

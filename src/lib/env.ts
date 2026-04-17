@@ -15,9 +15,5 @@ export const env = {
 	PORT: Number(optional("PORT", "3000")),
 	POSTMARK_WEBHOOK_TOKEN: required("POSTMARK_WEBHOOK_TOKEN"),
 	EMAIL_DOMAIN: optional("EMAIL_DOMAIN", "kharcha.app"),
-	GMAIL_SYNC_ENABLED_FOR: optional("GMAIL_SYNC_ENABLED_FOR", "")
-		.split(",")
-		.map((s) => s.trim())
-		.filter(Boolean),
 	GEMINI_API_KEY: optional("GEMINI_API_KEY", ""),
 } as const;

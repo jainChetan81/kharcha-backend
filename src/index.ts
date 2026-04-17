@@ -6,6 +6,7 @@ import { closeDatabase } from "./db";
 import { checkDatabase } from "./db/check";
 import { env } from "./lib/env";
 import { rateLimiter } from "./lib/rate-limit";
+import device from "./routes/device";
 import featureFlags from "./routes/feature-flags";
 import register from "./routes/register";
 import sync from "./routes/sync";
@@ -20,7 +21,7 @@ if (process.env.NODE_ENV !== "production") {
 		"*",
 		cors({
 			origin: ["http://localhost:8081", "http://localhost:8082"],
-			allowMethods: ["GET", "POST"],
+			allowMethods: ["GET", "POST", "PATCH"],
 			allowHeaders: ["Content-Type", "x-device-id"],
 		}),
 	);
@@ -29,10 +30,12 @@ if (process.env.NODE_ENV !== "production") {
 app.use("/register", rateLimiter({ windowMs: 60_000, max: 10 }));
 app.use("/webhook/*", rateLimiter({ windowMs: 60_000, max: 30 }));
 app.use("/sync", rateLimiter({ windowMs: 60_000, max: 30 }));
+app.use("/device/*", rateLimiter({ windowMs: 60_000, max: 30 }));
 app.use("/feature-flags", rateLimiter({ windowMs: 60_000, max: 60 }));
 
 app.get("/", (c) => c.json({ status: "ok", app: "kharcha-backend" }));
 
+app.route("/device", device);
 app.route("/feature-flags", featureFlags);
 app.route("/register", register);
 app.route("/sync", sync);

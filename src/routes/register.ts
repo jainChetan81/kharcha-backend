@@ -33,14 +33,27 @@ register.post("/", async (c) => {
 		.slice(0, EMAIL_TOKEN_LENGTH);
 	const forwardingEmail = `${EMAIL_PREFIX}${token}@${env.EMAIL_DOMAIN}`;
 
-	// Upsert: insert if new, do nothing on conflict (idempotent)
-	await db
-		.insert(devices)
-		.values({
-			device_id: body.device_id,
-			forwarding_email: forwardingEmail,
-		})
-		.onConflictDoNothing({ target: devices.device_id });
+	const name = body.name?.trim() || null;
+
+	// Upsert: insert if new, update name on conflict when provided
+	if (name) {
+		await db
+			.insert(devices)
+			.values({
+				device_id: body.device_id,
+				name,
+				forwarding_email: forwardingEmail,
+			})
+			.onConflictDoUpdate({ target: devices.device_id, set: { name } });
+	} else {
+		await db
+			.insert(devices)
+			.values({
+				device_id: body.device_id,
+				forwarding_email: forwardingEmail,
+			})
+			.onConflictDoNothing({ target: devices.device_id });
+	}
 
 	// Always fetch the current record to return
 	const [device] = await db
@@ -50,7 +63,7 @@ register.post("/", async (c) => {
 		.limit(1);
 
 	return c.json<RegisterResponse>(
-		{ forwarding_email: device.forwarding_email },
+		{ forwarding_email: device.forwarding_email, name: device.name },
 		device.forwarding_email === forwardingEmail ? 201 : 200,
 	);
 });

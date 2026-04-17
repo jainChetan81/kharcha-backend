@@ -1,4 +1,5 @@
 import {
+	boolean,
 	index,
 	numeric,
 	pgEnum,
@@ -18,7 +19,10 @@ export const sourceTypeEnum = pgEnum("source_type", ["synced"]);
 export const devices = pgTable("devices", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	device_id: text("device_id").unique().notNull(),
+	name: text("name"),
 	forwarding_email: text("forwarding_email").unique().notNull(),
+	gmail_sync_enabled: boolean("gmail_sync_enabled").default(false).notNull(),
+	device_sync_enabled: boolean("device_sync_enabled").default(false).notNull(),
 	created_at: timestamp("created_at").defaultNow(),
 });
 
