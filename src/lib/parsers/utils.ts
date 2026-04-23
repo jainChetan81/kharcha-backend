@@ -50,6 +50,18 @@ export function decodeHtmlEntities(str: string): string {
 		.replace(/&nbsp;/g, " ");
 }
 
+export function stripHtml(html: string): string {
+	return html
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&nbsp;/gi, " ")
+		.replace(/&amp;/gi, "&")
+		.replace(/&lt;/gi, "<")
+		.replace(/&gt;/gi, ">")
+		.replace(/&#?\w+;/gi, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
 export function tryParsers(
 	parsers: Parser[],
 	body: string,

@@ -5,8 +5,9 @@ import { db } from "../db";
 import { devices, transactions } from "../db/schema";
 import { ERROR_MESSAGES, SOURCE_TYPE } from "../lib/constants";
 import { env } from "../lib/env";
-import { parseWithGemini } from "../lib/gemini";
+import { parseWithGemini } from "../lib/gemini/parser";
 import { parseEmail } from "../lib/parsers";
+import { stripHtml } from "../lib/parsers/utils";
 import { parsedTransactionSchema } from "../lib/validation";
 import type { PostmarkInboundEmail } from "../types";
 
@@ -112,11 +113,28 @@ webhook.post("/email/:token", async (c) => {
 
 	let parsedBy = parsed ? "regex" : null;
 
-	// Gemini fallback — single attempt after all regex fails
+	// Gemini fallback — single attempt after all regex fails.
+	// The rich parser returns extra fields (category, source, etc.) that the
+	// webhook table doesn't use; we pick only the 4 fields the row needs.
+	// Categories aren't synced server-side, so we pass an empty list.
 	if (!parsed) {
 		console.log("[webhook] regex parsers failed, trying Gemini fallback");
-		parsed = await parseWithGemini(Subject, TextBody || HtmlBody || "");
-		if (parsed) parsedBy = "gemini";
+		const cleanBody = stripHtml(TextBody || HtmlBody || "");
+		const text = `Subject: ${Subject}\n\nBody:\n${cleanBody}`;
+		const geminiResult = await parseWithGemini(text, []);
+		if (geminiResult.parsed) {
+			parsed = {
+				amount: geminiResult.parsed.amount,
+				merchant: geminiResult.parsed.merchant ?? "Unknown",
+				date: geminiResult.parsed.date,
+				type: geminiResult.parsed.type,
+			};
+			parsedBy = "gemini";
+		} else if (geminiResult.error) {
+			console.log(
+				`[webhook] gemini error: ${geminiResult.error} ${geminiResult.errorMessage ?? ""}`,
+			);
+		}
 	}
 
 	console.log(

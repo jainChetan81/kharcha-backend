@@ -16,14 +16,21 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
 
 export const sourceTypeEnum = pgEnum("source_type", ["synced"]);
 
+export const devicePlatformEnum = pgEnum("device_platform", ["ios", "android"]);
+
 export const devices = pgTable("devices", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	device_id: text("device_id").unique().notNull(),
+	platform: devicePlatformEnum("platform"),
 	name: text("name"),
 	forwarding_email: text("forwarding_email").unique().notNull(),
 	gmail_sync_enabled: boolean("gmail_sync_enabled").default(false).notNull(),
 	device_sync_enabled: boolean("device_sync_enabled").default(false).notNull(),
 	created_at: timestamp("created_at").defaultNow(),
+	updated_at: timestamp("updated_at")
+		.defaultNow()
+		.notNull()
+		.$onUpdate(() => new Date()),
 });
 
 export const transactions = pgTable(

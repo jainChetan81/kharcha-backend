@@ -6,6 +6,7 @@ import { closeDatabase } from "./db";
 import { checkDatabase } from "./db/check";
 import { env } from "./lib/env";
 import { rateLimiter } from "./lib/rate-limit";
+import ai from "./routes/ai";
 import device from "./routes/device";
 import featureFlags from "./routes/feature-flags";
 import register from "./routes/register";
@@ -32,9 +33,11 @@ app.use("/webhook/*", rateLimiter({ windowMs: 60_000, max: 30 }));
 app.use("/sync", rateLimiter({ windowMs: 60_000, max: 30 }));
 app.use("/device/*", rateLimiter({ windowMs: 60_000, max: 30 }));
 app.use("/feature-flags", rateLimiter({ windowMs: 60_000, max: 60 }));
+app.use("/ai/*", rateLimiter({ windowMs: 60_000, max: 30 }));
 
 app.get("/", (c) => c.json({ status: "ok", app: "kharcha-backend" }));
 
+app.route("/ai", ai);
 app.route("/device", device);
 app.route("/feature-flags", featureFlags);
 app.route("/register", register);
